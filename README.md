@@ -1,157 +1,70 @@
-Aqui está um exemplo de um arquivo `README.md` para o seu jogo:
+# Jogo de Adivinhação com Docker Compose
 
----
+Este repositório contém uma aplicação de jogo de adivinhação com infraestrutura Docker Compose completa.
+O sistema usa um backend Flask, um banco de dados PostgreSQL e um frontend React servido por NGINX.
 
-# Jogo de Adivinhação com Flask
+## Arquitetura
 
-Este é um simples jogo de adivinhação desenvolvido utilizando o framework Flask. O jogador deve adivinhar uma senha criada aleatoriamente, e o sistema fornecerá feedback sobre o número de letras corretas e suas respectivas posições.
+- `postgres`
+  - usa a imagem oficial `postgres:15-alpine`
+  - dados armazenados em volume persistente `postgres_data`
+  - reinício automático configurado com `restart: always`
+- `backend`
+  - container Python/Flask construído a partir de `Dockerfile.backend`
+  - usa variáveis de ambiente para conectar ao Postgres
+  - expõe internamente a porta `5000`
+  - pode ser escalado com `docker compose up --scale backend=2`
+- `frontend`
+  - container NGINX construído a partir de `Dockerfile.frontend`
+  - serve os arquivos React e faz proxy reverso ao backend
+  - balanceia carga para múltiplas instâncias do backend via `nginx.conf`
+  - expõe a aplicação em `http://localhost`
 
-## Funcionalidades
+## Como rodar
 
-- Criação de um novo jogo com uma senha fornecida pelo usuário.
-- Adivinhe a senha e receba feedback se as letras estão corretas e/ou em posições corretas.
-- As senhas são armazenadas  utilizando base64.
-- As adivinhações incorretas retornam uma mensagem com dicas.
-  
-## Requisitos
-
-- Python 3.8+
-- Flask
-- Um banco de dados local (ou um mecanismo de armazenamento configurado em `current_app.db`)
-- node 18.17.0
-
-## Instalação
-
-1. Clone o repositório:
-
-   ```bash
-   git clone https://github.com/fams/guess_game.git
-   cd guess-game
-   ```
-
-2. Crie um ambiente virtual e ative-o:
+1. Ajuste as variáveis em `.env` se necessário.
+2. Execute:
 
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate  # Windows
+   docker compose up --build --scale backend=2
    ```
 
-3. Instale as dependências:
+3. Acesse a aplicação em:
 
-   ```bash
-   pip install -r requirements.txt
+   ```text
+   http://localhost
    ```
 
-4. Configure o banco de dados com as variáveis de ambiente no arquivo start-backend.sh
-    1. Para sqlite
+## Opção de escala do backend
 
-        ```bash
-            export FLASK_APP="run.py"
-            export FLASK_DB_TYPE="sqlite"            # Use SQLITE
-            export FLASK_DB_PATH="caminho/db.sqlite" # caminho do banco
-        ```
+O projeto já suporta `docker compose up --scale backend=2`.
+O NGINX usa `upstream backend` em `nginx.conf` com `server backend:5000 resolve;`, permitindo que múltiplas instâncias do backend sejam balanceadas.
 
-    2. Para Postgres
+## Resiliência e persistência
 
-        ```bash
-            export FLASK_APP="run.py"
-            export FLASK_DB_TYPE="postgres"       # Use postgres
-            export FLASK_DB_USER="postgres"       # Usuário do banco
-            export FLASK_DB_NAME="postgres"       # Nome do Banco
-            export FLASK_DB_PASSWORD="secretpass" # Senha do banco
-            export FLASK_DB_HOST="localhost"      # Hostname
-            export FLASK_DB_PORT="5432"           # Porta
-        ```
+- todos os serviços têm `restart: always`
+- o banco PostgreSQL armazena dados em volume separado `postgres_data`
+- o backend e o frontend podem ser reiniciados automaticamente em caso de falha
 
-    3. Para DynamoDB
+## Atualização de componentes
 
-        ```bash
-        export FLASK_APP="run.py"
-        export FLASK_DB_TYPE="dynamodb"       # Use postgres
-        export AWS_DEFAULT_REGION="us-east-1" # AWS region
-        export AWS_ACCESS_KEY_ID="FAKEACCESSKEY123456" 
-        export AWS_SECRET_ACCESS_KEY="FakeSecretAccessKey987654321"
-        export AWS_SESSION_TOKEN="FakeSessionTokenABCDEFGHIJKLMNOPQRSTUVXYZ1234567890"
-        ```
+A estrutura permite atualizar cada parte do sistema com pouca complexidade:
 
-5. Execute o backend
+- backend: modifique `Dockerfile.backend` ou mude a imagem/base e execute `docker compose up --build`
+- frontend: modifique `frontend/` ou `Dockerfile.frontend` e execute `docker compose up --build`
+- banco: mude a versão da imagem Postgres em `docker-compose.yml` e execute `docker compose up`
 
-   ```bash
-   ./start-backend.sh &
-   ```
+## Serviços e endereços
 
-6. Cuidado! verifique se o seu linux está lendo o arquivo .sh com fim de linha do windows CRLF. Para verificar utilize o vim -b start-backend.sh
+- Frontend: `http://localhost`
+- Backend (via proxy NGINX): `/create`, `/guess`, `/health`
 
-## Frontend
-No diretorio de frontend
+## Pré-requisitos
 
-1. Instale o node com o nvm. Se não tiver o nvm instalado, siga o [tutorial](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-
-    ```bash
-    nvm install 18.17.0
-    nvm use 18.17.0
-    # Habilite o yarn
-    corepack enable
-    ```
-
-2. Instale as dependências do node com o npm:
-
-    ```bash
-    npm install
-    ```
-
-3. Exporte a url onde está executando o backend e execute o backend.
-
-   ```bash
-    export REACT_APP_BACKEND_URL=http://localhost:5000
-    yarn start
-   ```
-
-## Como Jogar
-
-### 1. Criar um novo jogo
-
-Acesse a url do frontend http://localhost:3000
-
-Digite uma frase secreta
-
-Envie
-
-Salve o game-id
-
-
-### 2. Adivinhar a senha
-
-Acesse a url do frontend http://localhost:3000
-
-Vá para o endponint breaker
-
-entre com o game_id que foi gerado pelo Creator
-
-Tente adivinhar
-
-## Estrutura do Código
-
-### Rotas:
-
-- **`/create`**: Cria um novo jogo. Armazena a senha codificada em base64 e retorna um `game_id`.
-- **`/guess/<game_id>`**: Permite ao usuário adivinhar a senha. Compara a adivinhação com a senha armazenada e retorna o resultado.
-
-### Classes Importantes:
-
-- **`Guess`**: Classe responsável por gerenciar a lógica de comparação entre a senha e a tentativa do jogador.
-- **`WrongAttempt`**: Exceção personalizada que é levantada quando a tentativa está incorreta.
-
-
-
-## Melhorias Futuras
-
-- Implementar autenticação de usuário para salvar e carregar jogos.
-- Adicionar limite de tentativas.
-- Melhorar a interface de feedback para as tentativas de adivinhação.
+- Docker Engine instalado
+- Docker Compose v2 (`docker compose`)
 
 ## Licença
 
-Este projeto está licenciado sob a [MIT License](LICENSE).
+Este projeto está licenciado sob MIT.
 

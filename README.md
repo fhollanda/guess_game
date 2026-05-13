@@ -14,7 +14,7 @@ O sistema usa um backend Flask, um banco de dados PostgreSQL e um frontend React
 
 ### 1. Criar um novo jogo
 
-Acesse a url do frontend http://localhost:3000
+Acesse a url do frontend http://localhost
 
 Digite uma frase secreta
 
@@ -25,7 +25,7 @@ Salve o game-id
 
 ### 2. Adivinhar a senha
 
-Acesse a url do frontend http://localhost:3000
+Acesse a url do frontend http://localhost
 
 Vá para o endponint breaker
 

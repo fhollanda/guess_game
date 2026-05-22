@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "guess-game.fullname" . }}-nginx-config
+  labels:
+    {{- include "guess-game.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+        sendfile      on;
+        keepalive_timeout  65;
+        gzip  on;
+
+        upstream backend {
+            least_conn;
+            server backend:{{ .Values.backend.port }};
+        }
+
+        server {
+            listen 80;
+            server_name localhost;
+
+            location / {
+                root   /usr/share/nginx/html;
+                try_files $uri $uri/ /index.html;
+            }
+
+            location /create {
+                proxy_pass http://backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            location /guess {
+                proxy_pass http://backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            location /health {
+                proxy_pass http://backend/health;
+                proxy_set_header Host $host;
+            }
+        }
+    }

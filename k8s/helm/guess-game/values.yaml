@@ -1,0 +1,67 @@
+# ==============================================================
+# Valores padrão do Helm Chart - guess-game
+# ==============================================================
+
+# ---------------------------------------------------------------
+# Imagens Docker
+# ---------------------------------------------------------------
+images:
+  backend:
+    repository: fhollandax/guess_game_backend
+    tag: latest
+    pullPolicy: Always
+  frontend:
+    repository: fhollandax/guess_game_frontend
+    tag: latest
+    pullPolicy: Always
+  postgres:
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------
+# PostgreSQL
+# ---------------------------------------------------------------
+postgres:
+  user: postgres
+  password: postgres_password
+  database: guess_db
+  port: 5432
+  storage: 1Gi
+
+# ---------------------------------------------------------------
+# Backend (Flask)
+# ---------------------------------------------------------------
+backend:
+  replicaCount: 1
+  port: 5000
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# ---------------------------------------------------------------
+# HPA - Horizontal Pod Autoscaler do Backend
+# ---------------------------------------------------------------
+hpa:
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# ---------------------------------------------------------------
+# Frontend (NGINX + React)
+# ---------------------------------------------------------------
+frontend:
+  replicaCount: 1
+  port: 80
+  nodePort: 30080
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"

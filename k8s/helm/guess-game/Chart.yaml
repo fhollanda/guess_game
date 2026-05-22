@@ -1,0 +1,13 @@
+apiVersion: v2
+name: guess-game
+description: Jogo de Adivinhação - Backend Flask, Frontend React/NGINX e PostgreSQL
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - guess-game
+  - flask
+  - react
+  - postgresql
+maintainers:
+  - name: fhollandax

@@ -45,6 +45,14 @@ Tente adivinhar
 - **`Guess`**: Classe responsável por gerenciar a lógica de comparação entre a senha e a tentativa do jogador.
 - **`WrongAttempt`**: Exceção personalizada que é levantada quando a tentativa está incorreta.
 
+---
+# Docker
+
+## Pré-requisitos
+
+- Docker Engine instalado
+- Docker Compose v2 (`docker compose`)
+
 ## Arquitetura
 
 - `postgres`
@@ -101,12 +109,48 @@ A estrutura permite atualizar cada parte do sistema com pouca complexidade:
 - Frontend: `http://localhost`
 - Backend (via proxy NGINX): `/create`, `/guess`, `/health`
 
-## Pré-requisitos
+---
+# Kubernetes com k3d e Helm
 
-- Docker Engine instalado
-- Docker Compose v2 (`docker compose`)
+### Pré-requisitos
+
+- k3d, kubectl e Helm 3 instalados
+
+### Componentes instalados
+
+| Componente | Tipo | Descrição |
+|---|---|---|
+| `postgres-secret` | Secret | Credenciais do PostgreSQL armazenadas com segurança |
+| `postgres-pvc` | PersistentVolumeClaim | Volume de 1Gi para persistência dos dados do banco |
+| `postgres` | Deployment + Service | Banco de dados PostgreSQL 15 |
+| `backend` | Deployment + Service | API Flask com initContainer que aguarda o Postgres subir |
+| `backend-hpa` | HorizontalPodAutoscaler | Escala o backend entre 1 e 5 réplicas quando a CPU passa de 70% |
+| `frontend` | Deployment + Service (NodePort) | NGINX servindo o React, com proxy reverso ao backend — acessível na porta 30080 |
+| `nginx-config` | ConfigMap | Configuração do NGINX adaptada para Kubernetes (resolução de nomes via CoreDNS) |
+
+### Deploy
+
+```bash
+# 1. Criar o cluster com mapeamento de porta
+k3d cluster create guess-game --port "30080:30080@loadbalancer"
+
+# 2. Instalar com Helm
+helm install guess-game ./k8s/helm/guess-game
+
+# 3. Aguardar os pods ficarem prontos
+kubectl get pods -w
+
+# 4. Acessar a aplicação
+http://localhost:30080
+```
+
+### Remover
+
+```bash
+helm uninstall guess-game
+k3d cluster delete guess-game
+```
 
 ## Licença
 
 Este projeto está licenciado sob MIT.
-
